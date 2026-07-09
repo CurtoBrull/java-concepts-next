@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BLOCKS } from "@/data/blocks";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,42 +16,15 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        {/* Sidebar */}
-        <aside className="w-64 flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-y-auto">
-          <div className="sticky top-0">
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-              <Link href="/" className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
-                  J
-                </div>
-                <div>
-                  <h1 className="font-bold text-zinc-900 dark:text-zinc-50">Java Concepts</h1>
-                  <p className="text-xs text-zinc-500">Referencia completa</p>
-                </div>
-              </Link>
-            </div>
-
-            <nav className="p-2">
-              {BLOCKS.map((block) => (
-                <div key={block.id} className="mb-4">
-                  <div className={`px-3 py-1.5 text-xs font-semibold text-white rounded ${block.color}`}>
-                    {block.label}
-                  </div>
-                  <ul className="mt-1 space-y-0.5">
-                    {/* Concepts will be loaded client-side */}
-                  </ul>
-                </div>
-              ))}
-            </nav>
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+      <body className="font-sans antialiased">
+        {children}
       </body>
     </html>
   );
