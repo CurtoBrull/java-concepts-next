@@ -17,7 +17,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" style={{ backgroundColor: "#09090b" }}>
         <div className="flex min-h-screen">
           {/* Sidebar fixed */}
           <Sidebar />

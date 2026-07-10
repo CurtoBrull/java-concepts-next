@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { BLOCKS } from "@/data/blocks";
 import { getConceptsByBlock } from "@/data/concepts";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
 
   return (
     <aside
@@ -17,10 +20,14 @@ export default function Sidebar() {
     >
       {/* Logo header */}
       <div className="h-14 flex items-center gap-3 px-4 border-b border-zinc-800">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+        <Link href="/" className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
           J
-        </div>
-        {!collapsed && <span className="font-bold text-white text-sm">Java Concepts</span>}
+        </Link>
+        {!collapsed && (
+          <Link href="/" className="font-bold text-white text-sm">
+            Java Concepts
+          </Link>
+        )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="ml-auto p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
@@ -41,16 +48,18 @@ export default function Sidebar() {
         {BLOCKS.map((block) => {
           const blockConcepts = getConceptsByBlock(block.id);
           const anchorId = block.id.toLowerCase();
+          // Si estamos en home, usar anchor local; si no, ir a home con anchor
+          const blockHref = isHome ? `#${anchorId}` : `/#${anchorId}`;
 
           return (
             <div key={block.id} className="mb-4">
-              <a
-                href={`#${anchorId}`}
-                className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:text-zinc-300 transition-colors"
+              <Link
+                href={blockHref}
+                className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:text-white transition-colors"
               >
                 <div className={`w-2 h-2 rounded-full ${block.color} flex-shrink-0`} />
                 {!collapsed && <span>{block.label}</span>}
-              </a>
+              </Link>
 
               {!collapsed && (
                 <div className="mt-1 space-y-0.5">

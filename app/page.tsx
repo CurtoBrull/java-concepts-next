@@ -22,7 +22,7 @@ export default function Home() {
           const anchorId = block.id.toLowerCase();
 
           return (
-            <section key={block.id} id={anchorId}>
+            <section key={block.id} id={anchorId} style={{ scrollMarginTop: "3.5rem" }}>
               <div className="flex items-center gap-2.5 mb-4">
                 <div className={`w-3 h-3 rounded-full ${block.color}`} />
                 <h2 className="text-base font-semibold text-white">{block.label}</h2>
