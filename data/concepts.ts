@@ -1095,6 +1095,532 @@ SELECT name FROM users WHERE id IN (
       { question: '¿Lombok?', answer: 'Librería que genera bytecode para getters/setters/constructors via anotaciones. @Data, @Getter, @Setter, @Builder, @NoArgsConstructor, @AllArgsConstructor.' }
     ],
     subConcepts: []
+  },
+  // ==========================================
+  // JPA / HIBERNATE
+  // ==========================================
+  {
+    id: 400,
+    title: 'JPA',
+    slug: 'jpa',
+    block: 'JPA_HIBERNATE',
+    orderIndex: 1,
+    description: 'Java Persistence API. Especificacion estándar para mapear objetos Java a tablas relacionales. Hibernate es la implementación de referencia. Usa EntityManager para CRUD, JPQL para queries, y annotations para mapeo (@Entity, @Table, @Column, @Id).',
+    codeExample: `@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
+
+    @Column(name = "name")
+    private String name;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Order> orders = new ArrayList<>();
+
+    // getters, setters, constructors
+}
+
+// EntityManager CRUD
+EntityManager em = emf.createEntityManager();
+User user = em.find(User.class, 1L);      // find by ID
+em.persist(user);                          // insert
+em.merge(user);                            // update
+em.remove(user);                           // delete
+
+// JPQL query
+TypedQuery<User> query = em.createQuery(
+    "SELECT u FROM User u WHERE u.email = :email", User.class);
+query.setParameter("email", "ana@test.com");
+User result = query.getSingleResult();`,
+    questions: [
+      { question: '¿Qué es JPA?', answer: 'Java Persistence API es una especificación (API estándar) para mapeo objeto-relacional (ORM). Define interfaces y annotations. Hibernate es una implementación de JPA.' },
+      { question: '¿JPA vs Hibernate?', answer: 'JPA es la especificación (interfaces). Hibernate es una implementación concreta de JPA. Spring Data JPA usa Hibernate por debajo.' },
+      { question: '¿Qué es el EntityManager?', answer: 'Interfaz principal de JPA para interactuar con el contexto de persistencia. Métodos: persist (insert), find (select), merge (update), remove (delete), createQuery (JPQL).' }
+    ],
+    subConcepts: [
+      {
+        title: 'Relaciones (@OneToMany, @ManyToOne)',
+        slug: 'jpa-relaciones',
+        orderIndex: 1,
+        description: 'Mapeo de relaciones entre entidades. FetchType LAZY (default para @OneToMany) vs EAGER (default para @ManyToOne). CascadeType define operaciones en cascada.',
+        codeExample: `// OneToMany - un User tiene muchos Orders
+@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+private List<Order> orders = new ArrayList<>();
+
+// ManyToOne - muchos Orders pertenecen a un User
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "user_id")
+private User user;
+
+// ManyToMany con tabla de union
+@ManyToMany
+@JoinTable(
+    name = "user_role",
+    joinColumns = @JoinColumn(name = "user_id"),
+    inverseJoinColumns = @JoinColumn(name = "role_id")
+)
+private Set<Role> roles = new HashSet<>();`,
+        questions: [
+          { question: '¿Lazy vs Eager fetching?', answer: 'Lazy: carga relacion cuando se accede (proxy). Eager: carga todo de una vez. Lazy es default para collections (@OneToMany). Eager es default para @ManyToOne. Preferir LAZY para evitar N+1.' },
+          { question: '¿mappedBy?', answer: 'Indica qué lado es inverse (no owner). mappedBy = "user" en @OneToMany significa que User no controla la FK. Order tiene @ManyToOne con @JoinColumn y es el owner.' },
+          { question: '¿CascadeType.ALL?', answer: 'Propaga operaciones: PERSIST, MERGE, REMOVE, REFRESH, DETACH. ALL = todas. orphanRemoval=true elimina hijos cuando se remueven de la collection.' }
+        ]
+      },
+      {
+        title: 'JPQL y @Query',
+        slug: 'jpa-jpql-query',
+        orderIndex: 2,
+        description: 'JPQL (Java Persistence Query Language) usa entidades en vez de tablas. Spring Data JPA soporta derived queries (findBy...), @Query custom, y native queries.',
+        codeExample: `// Spring Data JPA derived queries
+List<User> findByEmail(String email);
+List<User> findByEmailAndActive(String email, boolean active);
+List<User> findByEmailContaining(String fragment);
+Optional<User> findByEmailIgnoreCase(String email);
+
+// @Query con JPQL
+@Query("SELECT u FROM User u WHERE u.email = :email")
+User findByEmailCustom(@Param("email") String email);
+
+// @Query con native SQL
+@Query(value = "SELECT * FROM users WHERE email = ?1", nativeQuery = true)
+User findByEmailNative(String email);
+
+// Ordenación y paginación
+Page<User> findByActive(boolean active, Pageable pageable);
+List<User> findByActiveOrderByNameDesc(boolean active);`,
+        questions: [
+          { question: '¿JPQL vs SQL?', answer: 'JPQL usa nombres de entidades y propiedades (User.email). SQL usa nombres de tablas y columnas (users.email). JPQL es portable entre bases de datos.' },
+          { question: '¿Derived queries?', answer: 'Spring Data JPA genera la query a partir del nombre del método. findByEmailAndActive genera SELECT ... WHERE email = ? AND active = ?. Limitado a queries simples.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 401,
+    title: 'Hibernate',
+    slug: 'hibernate',
+    block: 'JPA_HIBERNATE',
+    orderIndex: 2,
+    description: 'Implementación de JPA. Framework ORM más popular para Java. Features: lazy loading, caching (L1/L2), dirty checking, HQL, criteria API. Configuración via application.properties o persistence.xml.',
+    codeExample: `# application.properties
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# L2 Cache
+spring.jpa.properties.hibernate.cache.use_second_level_cache=true
+spring.jpa.properties.hibernate.cache.region.factory_class=org.hibernate.cache.jcache.JCacheRegionFactory
+
+# Batch processing
+spring.jpa.properties.hibernate.jdbc.batch_size=50
+spring.jpa.properties.hibernate.order_inserts=true`,
+    questions: [
+      { question: '¿Qué es dirty checking?', answer: 'Hibernate rueba cambios en entities managed. Cuando haces commit/flush, compara estado actual con snapshot. Si algo cambió, genera UPDATE automáticamente.' },
+      { question: '¿L1 vs L2 cache?', answer: 'L1: Session-level cache, siempre activo, una por transacción. L2: SessionFactory-level cache, compartido entre sesiones, requiere configuración. Reduce queries repetidas.' },
+      { question: '¿ddl-auto values?', answer: 'none: no hace nada. validate: valida schema existe. update: crea/modifica tablas (dev only). create: drop y recrea en cada start. create-drop: igual + drop al cerrar.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 402,
+    title: 'Transacciones @Transactional',
+    slug: 'transacciones',
+    block: 'JPA_HIBERNATE',
+    orderIndex: 3,
+    description: 'Spring @Transactional demarca transacciones declarativamente. Propagación (REQUIRED, REQUIRES_NEW, NESTED), aislamiento (READ_COMMITTED, SERIALIZABLE), rollback para excepciones unchecked.',
+    codeExample: `@Service
+public class TransferService {
+    @Transactional
+    public void transfer(Long from, Long to, BigDecimal amount) {
+        Account src = repo.findById(from);
+        Account dst = repo.findById(to);
+        src.setBalance(src.getBalance().subtract(amount));
+        dst.setBalance(dst.getBalance().add(amount));
+        // commit automatico al terminar el metodo
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logTransfer(Long from, Long to, BigDecimal amount) {
+        // nueva transaccion independiente
+    }
+
+    @Transactional(
+        isolation = Isolation.READ_COMMITTED,
+        rollbackFor = {InsufficientFundsException.class}
+    )
+    public void safeTransfer(Long from, Long to, BigDecimal amount) {
+        // rollback custom exceptions
+    }
+}`,
+    questions: [
+      { question: '¿Propagation.REQUIRES_NEW?', answer: 'Suspende la transacción actual y crea una nueva. Útil para logs/auditoría que deben commitearse independientemente de la transacción principal.' },
+      { question: '¿Rollback para checked exceptions?', answer: 'Por defecto soloUnchecked exceptions (RuntimeException) causan rollback. Para checked, usar rollbackFor = MiException.class.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 403,
+    title: 'JDBC',
+    slug: 'jdbc',
+    block: 'JPA_HIBERNATE',
+    orderIndex: 4,
+    description: 'Java Database Connectivity. API de bajo nivel para acceso a bases de datos. DriverManager, Connection, Statement, PreparedStatement, ResultSet. Spring JDBC simplifica con JdbcTemplate.',
+    codeExample: `// JDBC puro
+try (Connection conn = DriverManager.getConnection(url, user, pass);
+     PreparedStatement ps = conn.prepareStatement(
+         "INSERT INTO users (name, email) VALUES (?, ?)")) {
+    ps.setString(1, "Ana");
+    ps.setString(2, "ana@test.com");
+    ps.executeUpdate();
+}
+
+// Spring JdbcTemplate
+@Repository
+public class UserRepository {
+    private final JdbcTemplate jdbc;
+
+    public User findById(Long id) {
+        return jdbc.queryForObject(
+            "SELECT id, name, email FROM users WHERE id = ?",
+            (rs, rowNum) -> new User(rs.getLong("id"),
+                rs.getString("name"), rs.getString("email")),
+            id);
+    }
+}`,
+    questions: [
+      { question: '¿JdbcTemplate vs JPA?', answer: 'JdbcTemplate para queries SQL directas, control total, simple. JPA para mapeo objeto-relacional, reduce boilerplate pero menos control sobre SQL.' },
+      { question: '¿PreparedStatement vs Statement?', answer: 'PreparedStatement: precompilado, parametrizado, previene SQL injection, mejor performance en queries repetidos. Statement: queries estáticos sin parámetros.' }
+    ],
+    subConcepts: []
+  },
+  // ==========================================
+  // SPRING BOOT
+  // ==========================================
+  {
+    id: 500,
+    title: 'Spring Boot Fundamentos',
+    slug: 'spring-boot-fundamentos',
+    block: 'SPRING_BOOT',
+    orderIndex: 1,
+    description: 'Framework que simplifica la creación de aplicaciones Spring. Autoconfiguration, embedded servers (Tomcat), starters, production-ready features. Opinionated: convención sobre configuración.',
+    codeExample: `@SpringBootApplication
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
+}
+
+// application.properties
+server.port=8080
+spring.datasource.url=jdbc:postgresql://localhost:5432/mydb
+spring.jpa.hibernate.ddl-auto=update
+
+// Starters - dependencias agrupadas
+// spring-boot-starter-web
+// spring-boot-starter-data-jpa
+// spring-boot-starter-security
+// spring-boot-starter-test`,
+    questions: [
+      { question: '¿Qué es @SpringBootApplication?', answer: 'Combina @Configuration + @EnableAutoConfiguration + @ComponentScan. Es la annotation principal para arrancar una app Spring Boot.' },
+      { question: '¿Autoconfiguration?', answer: 'Spring Boot configura beans automáticamente según dependencias en classpath. Ej: si tiene spring-boot-starter-web, configura Tomcat, DispatcherServlet, etc.' },
+      { question: '¿Starters?', answer: 'Dependencias agrupadas para una funcionalidad. spring-boot-starter-web incluye Spring MVC, Tomcat, Jackson, validation. Simplifica el pom.xml.' }
+    ],
+    subConcepts: [
+      {
+        title: 'Autoconfiguration y Conditions',
+        slug: 'autoconfiguration-conditions',
+        orderIndex: 1,
+        description: 'Autoconfiguration usa @Conditional para decidir qué beans crear. @ConditionalOnClass, @ConditionalOnMissingBean, @ConditionalOnProperty.',
+        codeExample: `@Configuration
+@ConditionalOnClass(DataSource.class)
+@EnableConfigurationProperties(DataSourceProperties.class)
+public class DataSourceAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public DataSource dataSource(DataSourceProperties props) {
+        return DataSourceBuilder.create()
+            .url(props.getUrl())
+            .username(props.getUsername())
+            .password(props.getPassword())
+            .build();
+    }
+}
+
+// Excluir autoconfigurations
+@SpringBootApplication(exclude = {
+    DataSourceAutoConfiguration.class,
+    RedisAutoConfiguration.class
+})`,
+        questions: [
+          { question: '¿@ConditionalOnMissingBean?', answer: 'Crea el bean solo si no existe ya uno del mismo tipo. Permite override: si defines tu propio DataSource, Spring no crea el default.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 501,
+    title: 'Spring Boot Testing',
+    slug: 'spring-boot-testing',
+    block: 'SPRING_BOOT',
+    orderIndex: 2,
+    description: 'Testing en Spring Boot. @SpringBootTest (full context), @WebMvcTest (solo web layer), @DataJpaTest (solo JPA), @MockBean para mockear dependencias.',
+    codeExample: `// Test de integración completo
+@SpringBootTest
+class MyServiceTest {
+    @Autowired private MyService service;
+
+    @Test
+    void shouldDoSomething() {
+        // test con contexto Spring completo
+    }
+}
+
+// Test de controller (web layer)
+@WebMvcTest(UserController.class)
+class UserControllerTest {
+    @Autowired private MockMvc mockMvc;
+    @MockBean private UserService userService;
+
+    @Test
+    void shouldReturnUser() throws Exception {
+        when(userService.findById(1L)).thenReturn(new User("Ana"));
+
+        mockMvc.perform(get("/users/1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Ana"));
+    }
+}
+
+// Test de JPA
+@DataJpaTest
+class UserRepositoryTest {
+    @Autowired private TestEntityManager em;
+    @Autowired private UserRepository repo;
+
+    @Test
+    void shouldFindByEmail() {
+        em.persist(new User("Ana", "ana@test.com"));
+        Optional<User> found = repo.findByEmail("ana@test.com");
+        assertThat(found).isPresent();
+    }
+}`,
+    questions: [
+      { question: '¿@SpringBootTest vs @WebMvcTest?', answer: '@SpringBootTest carga contexto completo (lento). @WebMvcTest solo carga web layer (controllers, MVC) y mockea servicios. Más rápido para tests de controller.' },
+      { question: '¿@MockBean?', answer: 'Reemplaza un bean real con un mock de Mockito en el contexto Spring. Útil para aislar capas: mockear service en tests de controller.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 502,
+    title: 'Microservicios',
+    slug: 'microservicios',
+    block: 'SPRING_BOOT',
+    orderIndex: 3,
+    description: 'Arquitectura donde la app se divide en servicios pequeños e independientes. Spring Cloud: Eureka (service discovery), Config Server, Gateway, Circuit Breaker (Resilience4j), Sleuth/Zipkin (tracing).',
+    codeExample: `// Eureka client
+@SpringBootApplication
+@EnableEurekaClient
+public class ProductService { }
+
+// API Gateway
+@SpringBootApplication
+@EnableZuulProxy
+public class Gateway { }
+
+// Circuit Breaker (Resilience4j)
+@CircuitBreaker(name = "productService", fallbackMethod = "fallback")
+public Product getProduct(Long id) {
+    return restTemplate.getForObject("http://product-service/" + id, Product.class);
+}
+
+public Product fallback(Long id, Exception e) {
+    return new Product("default", 0);
+}`,
+    questions: [
+      { question: '¿Microservicios vs Monolito?', answer: 'Microservicios: independientes, escalables, deploy independiente, tech stack variado. Monolito: simple, fácil debugging, deploy único. Microservicios añaden complejidad: network, consistencia, tracing.' },
+      { question: '¿Service Discovery?', answer: 'Eureka registry. Servicios se registran al arrancar. Otros servicios consultan el registry para encontrar instancias. Permite escalado dinámico sin configuración manual.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 503,
+    title: 'Spring Boot Actuator',
+    slug: 'spring-boot-actuator',
+    block: 'SPRING_BOOT',
+    orderIndex: 4,
+    description: 'Features de producción: health checks, métricas, info, environment. Endpoints HTTP: /actuator/health, /actuator/metrics, /actuator/info. Integración con Prometheus, Grafana.',
+    codeExample: `# application.properties
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=when-authorized
+management.endpoints.web.base-path=/manage
+
+# Prometheus
+management.metrics.export.prometheus.enabled=true
+management.endpoints.web.exposure.include=prometheus
+
+# Custom health indicator
+@Component
+public class CustomHealthIndicator implements HealthIndicator {
+    @Override
+    public Health health() {
+        int errorCode = check();
+        if (errorCode != 0) {
+            return Health.down()
+                .withDetail("Error Code", errorCode).build();
+        }
+        return Health.up().build();
+    }
+}`,
+    questions: [
+      { question: '¿Actuator endpoints?', answer: '/health: estado app. /metrics: métricas JVM/HTTP/DB. /info: info app. /env: environment. /loggers: cambiar log levels en runtime. /beans: beans registrados.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 504,
+    title: 'Profiles y Configuración',
+    slug: 'profiles-config',
+    block: 'SPRING_BOOT',
+    orderIndex: 5,
+    description: 'Profiles permiten configuración por entorno (dev, prod, test). Archivos: application-dev.properties, application-prod.properties. @Profile en beans. Configuración externalizada.',
+    codeExample: `# application.properties (default)
+spring.profiles.active=dev
+
+# application-dev.properties
+spring.datasource.url=jdbc:h2:mem:devdb
+server.port=8080
+
+# application-prod.properties
+spring.datasource.url=\${DB_URL}
+server.port=\${PORT:8080}
+
+// Beans por profile
+@Configuration
+@Profile("dev")
+public class DevConfig {
+    @Bean
+    public DataSource dataSource() {
+        return new H2EmbeddedDataSource();
+    }
+}
+
+@Configuration
+@Profile("prod")
+public class ProdConfig {
+    @Bean
+    public DataSource dataSource() {
+        return new PostgresDataSource();
+    }
+}`,
+    questions: [
+      { question: '¿Cómo activar profiles?', answer: 'spring.profiles.active=dev en properties. O via línea de comandos: java -jar app.jar --spring.profiles.active=prod. O env var: SPRING_PROFILES_ACTIVE=prod.' }
+    ],
+    subConcepts: []
+  },
+  // ==========================================
+  // CLEAN CODE / SOLID
+  // ==========================================
+  {
+    id: 600,
+    title: 'SOLID',
+    slug: 'solid',
+    block: 'CLEAN_CODE_SOLID',
+    orderIndex: 1,
+    description: '5 principios de diseño OOP. S=Single Responsibility, O=Open/Closed, L=Liskov Substitution, I=Interface Segregation, D=Dependency Inversion. Facilitan mantenimiento, testabilidad y extensibilidad.',
+    codeExample: `// S - Single Responsibility: una clase, una razon para cambiar
+class UserValidator { /* solo validacion */ }
+class UserRepository { /* solo persistencia */ }
+class UserController { /* solo HTTP */ }
+
+// O - Open/Closed: abierto a extension, cerrado a modificacion
+interface PaymentMethod { void pay(BigDecimal amount); }
+class CreditCard implements PaymentMethod { ... }
+class PayPal implements PaymentMethod { ... }
+// Agregar nuevos metodos sin tocar PaymentProcessor
+
+// L - Liskov Substitution: subclase usable donde superclase esperada
+class Bird { void fly() {} }
+class Penguin extends Bird { /* no puede volar -> viola LSP */ }
+// Solucion: separar FlyingBird
+
+// I - Interface Segregation: interfaces pequenas y especificas
+interface Printer { void print(); }
+interface Scanner { void scan(); }
+// MultiFunctionPrinter implementa ambos
+// SimplePrinter solo Printer
+
+// D - Dependency Inversion: depender de abstracciones
+interface Database { void save(User u); }
+class UserController {
+    private final Database db; // no de MySqlDatabase concreta
+}`,
+    questions: [
+      { question: '¿Single Responsibility?', answer: 'Una clase debe tener una sola razon para cambiar. UserController solo maneja HTTP, no accede a DB ni valida reglas de negocio. Separar en capas: Controller, Service, Repository.' },
+      { question: '¿Open/Closed?', answer: 'Abierto a extensión (nuevas funcionalidades via nuevas clases/interfaces), cerrado a modificación (no cambiar código existente). Usar polimorfismo: añadir nuevas implementaciones de interface sin tocar el código que las usa.' },
+      { question: '¿Liskov Substitution?', answer: 'Si S es subtipo de T, objetos de T pueden reemplazarse por S sin alterar comportamiento. Penguin extends Bird violates LSP si Bird.fly() se espera que funcione. Solución: interfaces específicas (FlyingBird).' },
+      { question: '¿Dependency Inversion?', answer: 'Módulos de alto nivel no deben depender de módulos de bajo nivel. Ambos deben depender de abstracciones (interfaces). UserController no depende de MySQLDatabase, depende de interface Database.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 601,
+    title: 'Clean Code',
+    slug: 'clean-code',
+    block: 'CLEAN_CODE_SOLID',
+    orderIndex: 2,
+    description: 'Principios para escribir código legible, mantenible y testeable. Nombres descriptivos, funciones pequeñas, una responsabilidad, sin comentarios obvios, sin duplicación. Base: libro de Robert C. Martin (Uncle Bob).',
+    codeExample: `// MAL - nombres cripticos
+public List<int[]> rl(List<int[]> n) {
+    List<int[]> r = new ArrayList<>();
+    for (int[] x : n) {
+        if (x[0] == 4) r.add(x);
+    }
+    return r;
+}
+
+// BIEN - nombres descriptivos
+public List<int[]> flaggedCells(List<int[]> gameBoard) {
+    List<int[]> flagged = new ArrayList<>();
+    for (int[] cell : gameBoard) {
+        if (cell[STATUS_VALUE] == FLAGGED) {
+            flagged.add(cell);
+        }
+    }
+    return flagged;
+}
+
+// MAL - funcion larga con multiples responsabilidades
+public void process(User user) {
+    // validar
+    if (user.getName() == null) throw new RuntimeException();
+    // guardar
+    repo.save(user);
+    // enviar email
+    emailService.send(user.getEmail());
+    // log
+    logger.info("User saved");
+}
+
+// BIEN - extraer funciones pequenas
+public void processUser(User user) {
+    validate(user);
+    user = save(user);
+    sendWelcomeEmail(user);
+    logUserSaved(user);
+}`,
+    questions: [
+      { question: '¿Cuanto debe medir una funcion?', answer: 'Uncle Bob: 20 lineas ideal. Maximum 50. Si es más, extraer a funciones más pequeñas. Una funcion hace una cosa (Single Responsibility).' },
+      { question: '¿Comentarios buenos o malos?', answer: 'Malos: explican que hace el codigo (si necesitas comentario, el codigo no es claro). Buenos: explican POR QUE, no QUE. TODO, FIXME, warnings. Documentación de API publica (Javadoc).' },
+      { question: '¿DRY (Dont Repeat Yourself)?', answer: 'Evitar duplicación de codigo. Si hay codigo repetido en 3+ lugares, extraer a metodo/clase compartida. Reduce bugs: un cambio se hace en un solo sitio.' }
+    ],
+    subConcepts: []
   }
 ];
 
