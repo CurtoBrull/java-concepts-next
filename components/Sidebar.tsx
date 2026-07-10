@@ -13,6 +13,7 @@ export default function Sidebar() {
       className={`fixed left-0 top-0 h-full bg-zinc-900 border-r border-zinc-800 transition-all duration-300 z-50 overflow-hidden ${
         collapsed ? "w-16" : "w-64"
       }`}
+      style={{ backgroundColor: '#18181b' }}
     >
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800">
