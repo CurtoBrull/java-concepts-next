@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,8 +18,11 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="antialiased">
-        {children}
+      <body className="antialiased bg-zinc-950">
+        <Sidebar />
+        <div className="ml-64 min-h-screen">
+          {children}
+        </div>
       </body>
     </html>
   );
