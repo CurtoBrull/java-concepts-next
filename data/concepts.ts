@@ -66,6 +66,51 @@ export const concepts: Concept[] = [
     ]
   },
   {
+    id: 50,
+    title: 'Sintaxis y Tipos de Datos',
+    slug: 'sintaxis-tipos-datos',
+    block: 'JAVA_CORE',
+    orderIndex: 50,
+    description: 'Java es fuertemente tipado y statico. Tipos primitivos (8): byte, short, int, long, float, double, char, boolean. Tipos referencia: clases, interfaces, arrays, null. Wrapper classes (Integer, Double, etc) para usar primitivos como objetos. Autoboxing/unboxing automatico.',
+    codeExample: `// Tipos primitivos
+int entero = 42;        // 4 bytes
+long largo = 42L;       // 8 bytes
+double decimal = 3.14;  // 8 bytes
+float flotante = 3.14f; // 4 bytes
+char caracter = 'A';    // 2 bytes (Unicode)
+boolean flag = true;    // 1 byte (JVM-dependent)
+
+// Tipos referencia
+String texto = "Hola";
+int[] array = {1, 2, 3};
+Persona p = new Persona();
+
+// Wrappers (clases para primitivos)
+Integer enteroObj = Integer.valueOf(42);  //boxing
+int primitivo = enteroObj;               //unboxing automatico
+
+// var (Java 10+) - infiere tipo en variables locales
+var nombre = "Ana";   // String
+var lista = new ArrayList<String>();  // ArrayList<String>
+
+// Literales
+int binario = 0b1010;    // 10
+int octal = 012;         // 10
+int hex = 0xA;           // 10
+long underscore = 1_000_000;  // guion bajo para legibilidad
+
+// Conversiones
+int a = 10;
+double b = a;     // implicita (widening)
+int c = (int) b;  // explicita (narrowing)`,
+    questions: [
+      { question: 'Tipos primitivos vs referencia?', answer: 'Primitivos: guardan el valor directamente en stack, 8 tipos (byte, short, int, long, float, double, char, boolean). Referencia: guardan direccion de memoria en stack, objeto en heap. Primitivos pasan por valor; referencias pasan por valor de la referencia (modifican el objeto compartido).' },
+      { question: 'Autoboxing/Unboxing?', answer: 'Autoboxing: conversion automatica de primitivo a wrapper (int -> Integer). Unboxing: wrapper a primitivo (Integer -> int). Sucede en asignacion, paso de parametros, generics. Cuidado: Integer cache entre -128 y 127; == puede fallar fuera de ese rango.' },
+      { question: 'var (Java 10+)?', answer: 'Type inference para variables locales. var nombre = "Ana"; infiere String. Solo en variables locales con inicializacion, no en campos, parametros, ni returns. Mejora legibilidad en tipos largos pero no abusar.' }
+    ],
+    subConcepts: []
+  },
+  {
     id: 2,
     title: 'Objeto',
     slug: 'objeto',
@@ -153,6 +198,53 @@ export const concepts: Concept[] = [
     subConcepts: []
   },
   {
+    id: 55,
+    title: 'Abstraccion',
+    slug: 'abstraccion',
+    block: 'JAVA_CORE',
+    orderIndex: 55,
+    description: 'Abstraccion: capturar solo lo esencial de un objeto, ignorando detalles irrelevantes. Se logra con clases abstractas e interfaces. Reduce complejidad: el usuario de la clase no necesita conocer su implementacion, solo su contrato (que hace, no como). Junto con herencia, polimorfismo y encapsulamiento forma los 4 pilares de la POO.',
+    codeExample: `// Clase abstracta: define contrato + implementacion parcial
+public abstract class Figura {
+    // Metodo abstracto: cada subclase debe implementar
+    public abstract double area();
+
+    // Metodo concreto: implementacion compartida
+    public String descripcion() {
+        return "Figura con area = " + area();
+    }
+}
+
+// Interface: contrato puro (que hace, no como)
+public interface Dibujable {
+    void dibujar();
+}
+
+// Implementacion concreta
+public class Circulo extends Figura implements Dibujable {
+    private double radio;
+
+    public Circulo(double radio) { this.radio = radio; }
+
+    @Override
+    public double area() { return Math.PI * radio * radio; }
+
+    @Override
+    public void dibujar() { System.out.println("Dibujando circulo"); }
+}
+
+// Uso: el usuario no sabe como se calcula area
+Figura f = new Circulo(5);
+f.area();        // instancia
+f.descripcion(); // implementacion compartida`,
+    questions: [
+      { question: 'Abstraccion vs Encapsulamiento?', answer: 'Abstraccion: que hace un objeto (contrato, interface). Encapsulamiento: como ocultas su estado interno. Abstraccion usa clases abstractas/interfaces; Encapsulamiento usa private/getters/setters. Son complementarios: abstraccion define la forma, encapsulamiento protege el contenido.' },
+      { question: 'Clase abstracta vs Interface para abstraccion?', answer: 'Clase abstracta: si hay estado compartido o implementacion reutilizable. Interface: si solo necesario un contrato. Java 8+ permite default methods, pero interfaces no tienen estado. Prioriza interface: mas flexible (herencia multiple de tipo).' },
+      { question: 'Como logra la abstraccion reducir complejidad?', answer: 'El usuario de la clase solo necesita conocer el contrato (metodos publicos), no el detalle interno. Permite cambiar la implementacion sin romper el codigo que la usa. Ej: reemplazar Circulo por Cuadrado sin tocar el resto.' }
+    ],
+    subConcepts: []
+  },
+  {
     id: 6,
     title: 'Interface',
     slug: 'interface',
@@ -230,6 +322,64 @@ Predicate<String> noVacia = String::isEmpty;`,
     questions: [
       { question: '¿Stream vs Collection?', answer: 'Collection es una estructura de datos en memoria. Stream no almacena elementos, procesa bajo demanda. Stream es consumible (una vez recorrido, se cierra).' },
       { question: '¿Por qué Stream es lazy?', answer: 'Las operaciones intermedias retornan nuevo Stream y no ejecutan nada hasta que se invoca operación terminal. Permite optimizaciones como short-circuiting.' }
+    ],
+    subConcepts: []
+  },
+  {
+    id: 56,
+    title: 'Excepciones',
+    slug: 'excepciones',
+    block: 'JAVA_CORE',
+    orderIndex: 56,
+    description: 'Mecanismo de Java para manejar errores en runtime. Throwable: Error (no recuperar, JVM) y Exception. Exception: checked (compilador exige try/catch o throws) y unchecked/runtime (RuntimeException, opcionales). try-catch-finally, try-with-resources, multi-catch. Custom exceptions extends Exception/RuntimeException.',
+    codeExample: `// Jerarquia
+// Throwable
+//   ├── Error (JVM: OutOfMemoryError, StackOverflowError)
+//   └── Exception
+//        ├── Checked (IOException, SQLException) - compilador exige try/catch
+//        └── RuntimeException (unchecked: NullPointerException, ArrayIndexOutOfBounds)
+
+// try-catch-finally
+try {
+    FileReader reader = new FileReader("archivo.txt");
+} catch (FileNotFoundException e) {
+    System.out.println("Archivo no encontrado");
+} finally {
+    // siempre se ejecuta (cierre de recursos)
+}
+
+// try-with-resources (AutoCloseable)
+try (FileReader reader = new FileReader("archivo.txt");
+     BufferedReader br = new BufferedReader(reader)) {
+    String linea = br.readLine();
+} catch (IOException e) {
+    e.printStackTrace();
+}
+// reader y br se cierran automaticamente
+
+// multi-catch
+try {
+    // ...
+} catch (IOException | SQLException e) {
+    // maneja ambos tipos igual
+}
+
+// Custom exception
+public class MiException extends Exception {
+    public MiException(String msg) { super(msg); }
+}
+
+public class MiRuntimeException extends RuntimeException {
+    public MiRuntimeException(String msg) { super(msg); }
+}
+
+// throw
+if (edad < 0) throw new IllegalArgumentException("Edad negativa");`,
+    questions: [
+      { question: 'Checked vs Unchecked exceptions?', answer: 'Checked: heredan de Exception (no RuntimeException). El compilador obliga a manejarlas (try/catch o throws). Ej: IOException. Unchecked: heredan de RuntimeException. Compilador no obliga. Ej: NullPointerException, IllegalArgumentException.' },
+      { question: 'try-with-resources?', answer: 'Cierra recursos automaticamente al final del bloque. Requiere que el recurso implemente AutoCloseable. Multi-recurso: se cierran en orden inverso (ultimo declarado, primero cerrado). Mejor que finally manual.' },
+      { question: 'finally se ejecuta siempre?', answer: 'Casi. Si hay System.exit() o interrupcion brutal (kill -9) no. Si dentro del try hay un return, finally se ejecuta antes. Si finalmente lanza excepcion, sobrescribe la del try.' },
+      { question: 'Excepciones en Java 8+?', answer: 'Multi-catch con | (union): catch (IOException | SQLException e). No se pueden reasignar e en multi-catch. Nuevos metodos: addSuppressed() para excepciones en try-with-resources.' }
     ],
     subConcepts: []
   },
