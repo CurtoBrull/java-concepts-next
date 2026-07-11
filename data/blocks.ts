@@ -6,8 +6,8 @@ export const BLOCKS: BlockInfo[] = [
   { id: 'SPRING', label: 'Spring', color: 'bg-green-700' },
   { id: 'SPRING_BOOT', label: 'Spring Boot', color: 'bg-emerald-600' },
   { id: 'CLEAN_CODE_SOLID', label: 'Clean Code / SOLID', color: 'bg-purple-600' },
-  { id: 'TOOLS', label: 'Tools', color: 'bg-orange-600' },
   { id: 'APIS', label: 'APIs', color: 'bg-teal-600' },
+  { id: 'TOOLS', label: 'Tools', color: 'bg-orange-600' },
 ];
 
 export function getBlockInfo(blockId: string): BlockInfo {
