@@ -331,57 +331,403 @@ Predicate<String> noVacia = String::isEmpty;`,
     slug: 'excepciones',
     block: 'JAVA_CORE',
     orderIndex: 56,
-    description: 'Mecanismo de Java para manejar errores en runtime. Throwable: Error (no recuperar, JVM) y Exception. Exception: checked (compilador exige try/catch o throws) y unchecked/runtime (RuntimeException, opcionales). try-catch-finally, try-with-resources, multi-catch. Custom exceptions extends Exception/RuntimeException.',
-    codeExample: `// Jerarquia
-// Throwable
-//   ├── Error (JVM: OutOfMemoryError, StackOverflowError)
-//   └── Exception
-//        ├── Checked (IOException, SQLException) - compilador exige try/catch
-//        └── RuntimeException (unchecked: NullPointerException, ArrayIndexOutOfBounds)
+    description: 'Las excepciones son el mecanismo de Java para manejar situaciones excepcionales (errores) durante la ejecucion de un programa. Cuando algo falla, Java crea un objeto Exception con informacion del error (mensaje, causa, stack trace) y lo lanza (throw). El codigo que lo maneja lo captura (catch). Si nadie lo captura, el programa termina con el stack trace. Entender excepciones es clave para escribir codigo robusto que no se rompa ante entradas invalidas, archivos faltantes, conexiones caidas o bugs inesperados.',
+    codeExample: `// Ejemplo simple: que pasa sin manejo de excepciones
+String texto = null;
+System.out.println(texto.length());
+// Exception in thread "main" java.lang.NullPointerException
+//     at MiApp.main(MiApp.java:3)
+// El programa TERMINA. No hay recovery.
 
-// try-catch-finally
+// Con manejo: el programa sigue
+String texto = null;
 try {
-    FileReader reader = new FileReader("archivo.txt");
-} catch (FileNotFoundException e) {
-    System.out.println("Archivo no encontrado");
-} finally {
-    // siempre se ejecuta (cierre de recursos)
+    System.out.println(texto.length());
+} catch (NullPointerException e) {
+    System.out.println("El texto era null, uso default");
+    texto = "default";
+    System.out.println(texto.length());  // 7
+}
+// El programa sigue ejecutando
+
+// throw explicito: el que detecta el problema lo lanza
+public void setEdad(int edad) {
+    if (edad < 0) {
+        throw new IllegalArgumentException("Edad no puede ser negativa: " + edad);
+    }
+    this.edad = edad;
+}`,
+    questions: [
+      { question: 'Que es una excepcion y por que es importante?', answer: 'Una excepcion es un objeto que representa un fallo durante la ejecucion. Java la lanza (throw) automaticamente al detectar un error (dividir por cero, acceder a null, archivo no existe) o tu la lanzas explicitamente con throw new MiException. Sin manejo, el programa termina. Con manejo (try-catch), el programa puede recover y seguir. Es clave para robustez: el codigo no debe caer ante entradas o situaciones inesperadas.' },
+      { question: 'Que informacion tiene un objeto Exception?', answer: '1) Mensaje descriptivo (getMessage): "Archivo no encontrado: datos.txt". 2) Causa original (getCause): la excepcion que provoco esta, para chains. 3) Stack trace (getStackTrace): array con cada metodo en el call stack, clase, archivo y linea donde se produjo. Utisimo para debugging. 4) Excepciones suppressed (getSuppressed): para try-with-resources.' },
+      { question: ' throw vs throws?', answer: 'throw: lanza una instancia de excepcion (throw new MiException("msg")). throws: declara en la firma del metodo que puede lanzar una checked exception (void metodo() throws IOException). throws es una advertencia para quien llama; throw es la accion de lanzar.' }
+    ],
+    subConcepts: [
+      {
+        title: 'Jerarquia: Throwable, Error, Exception, RuntimeException',
+        slug: 'excepciones-jerarquia',
+        orderIndex: 1,
+        description: 'Toda excepcion hereda de Throwable. Se divide en Error (fallos graves de la JVM, no se deben manejar) y Exception (errores de aplicacion, si se manejan). Exception se subdivide en checked (compilador exige try/catch o throws) y unchecked/Runtime (opcionales, programador decide). Conocer la jerarquia es clave para elegir el tipo correcto.',
+        codeExample: `// JERARQUIA COMPLETA
+//
+// Throwable
+//   |
+//   +-- Error                          // NO manejar. JVM rota
+//   |     +-- OutOfMemoryError         // sin memoria
+//   |     +-- StackOverflowError      // recursion infinita
+//   |     +-- NoClassDefFoundError     // clase no encontrada
+//   |
+//   +-- Exception                      // SI manejar
+//         |
+//         +-- CHECKED (compilador exige try/catch o throws)
+//         |     +-- IOException
+//         |     +-- SQLException
+//         |     +-- ClassNotFoundException
+//         |     +-- InterruptedException
+//         |
+//         +-- UNCHECKED (extends RuntimeException, no obligatorio)
+//               +-- NullPointerException
+//               +-- ArrayIndexOutOfBoundsException
+//               +-- IllegalArgumentException
+//               +-- IllegalStateException
+//               +-- ArithmeticException          // dividir por cero
+//               +-- ClassCastException
+//               +-- NumberFormatException       // Integer.parseInt("abc")
+
+// Error: no intentar recuperar, algo grave paso
+try {
+    int[] huge = new int[Integer.MAX_VALUE];
+} catch (OutOfMemoryError e) {
+    // NO recomendado. Mejor dejar que JVM termine
+    // no hay recovery posible
 }
 
-// try-with-resources (AutoCloseable)
-try (FileReader reader = new FileReader("archivo.txt");
-     BufferedReader br = new BufferedReader(reader)) {
+// Checked: el compilador TE FUERZA a manejar
+public void leerArchivo(String path) throws IOException {
+    FileReader reader = new FileReader(path);  // checked!
+    // si no pones try/catch o throws, NO COMPILA
+}
+
+// Unchecked: el compilador no te obliga
+public void processar(String texto) {
+    System.out.println(texto.length());  // NPE posible, compilador no avisa
+}`,
+        questions: [
+          { question: 'Por que Error no se debe manejar?', answer: 'Error indica fallo grave de la JVM (OutOfMemoryError, StackOverflowError). Recover normalmente es imposible: si no hay memoria, ni siquiera puedes allocar el handler. Mejor dejar que JVM termine y revisar el log para investigar la causa raiz.' },
+          { question: 'Por que existen checked exceptions?', answer: 'Para forzar al programador a pensar en casos de error y manejarlos explicitamente. Ej: abrir archivo puede fallar (IOException). El compilador te obliga a decidir: catch, declarar throws, o propagar. Reduce bugs donde se olvida manejar fallos. Critico: no abusar checked para errores de programacion (esos son unchecked).' },
+          { question: 'Checked vs Unchecked cuando crear custom?', answer: 'Checked (extends Exception): cuando el caller puede recover (archivo no existe -> pedir otro). Unchecked (extends RuntimeException): cuando el error indica bug de programacion (edad negativa, estado invalido) que no deberia capturarse sino corregirse.' }
+        ]
+      },
+      {
+        title: 'try-catch-finally: capturar y limpiar',
+        slug: 'excepciones-try-catch-finally',
+        orderIndex: 2,
+        description: 'try contiene el codigo que puede fallar. catch captura excepciones de tipos especificos. finally se ejecuta siempre (haya o no excepcion), util para limpiar recursos. Se puede tener try-catch, try-finally, o ambos. Multiples catch van de mas especifico a mas general.',
+        codeExample: `// try-catch basico
+try {
+    int resultado = 10 / 0;
+} catch (ArithmeticException e) {
+    System.out.println("Error aritmetico: " + e.getMessage());
+}
+
+// multiples catch: orden de especifico a general
+try {
+    FileReader reader = new FileReader("datos.txt");
+    int dato = reader.read();
+} catch (FileNotFoundException e) {
+    // mas especifico primero
+    System.out.println("Archivo no existe: " + e.getMessage());
+} catch (IOException e) {
+    // mas general despues
+    System.out.println("Error de lectura: " + e.getMessage());
+}
+
+// finally: limpieza garantizada
+FileReader reader = null;
+try {
+    reader = new FileReader("datos.txt");
+    // usar reader
+} catch (IOException e) {
+    System.out.println("Error: " + e.getMessage());
+} finally {
+    // Esto se ejecuta SIEMPRE: con exito, error, return o break
+    if (reader != null) {
+        try {
+            reader.close();  // close() tambien puede lanzar IOException
+        } catch (IOException e) {
+            // ignorar error de cierre
+        }
+    }
+}
+
+// finally con return: finally gana
+public int ejemplo() {
+    try {
+        return 1;
+    } finally {
+        System.out.println("Esto se ejecuta antes del return");
+        // si aqui hay return 2, gana el 2
+    }
+}
+// imprime mensaje y devuelve 1 (o 2 si finally tiene return)`,
+        questions: [
+          { question: 'Por que el orden de catch importa?', answer: 'Java evalua los catch de arriba hacia abajo. El primero que matchea (isinstance) captura. Si pones catch (Exception) antes de catch (FileNotFoundException), el especifico nunca se ejecuta. Regla: siempre de subclase a superclase.' },
+          { question: 'finally puede no ejecutarse?', answer: 'Solo en casos extremos: System.exit(), interrupcion brutal (kill -9 JVM), o si el hilo es interrumpido antes de entrar al finally. En casos normales (incluso return, break, continue), finally se ejecuta.' },
+          { question: 'Esta bien usar finally para return?', answer: 'NO. Si finally tiene return, sobrescribe cualquier return del try y silencia excepciones no capturadas. Es una mala practica: dificil de debuggear. finally solo para cleanup, nunca para logica de control flow.' }
+        ]
+      },
+      {
+        title: 'try-with-resources (Java 7+)',
+        slug: 'excepciones-try-with-resources',
+        orderIndex: 3,
+        description: 'Sintaxis moderna para gestionar recursos que implementan AutoCloseable (InputStream, OutputStream, Reader, Connection, etc). El recurso se cierra automaticamente al salir del bloque, sin necesidad de finally. Mas conciso y seguro: elimina codigo boilerplate y previene resource leaks.',
+        codeExample: `// ANTES (Java 6): verbose y propenso a leaks
+BufferedReader br = null;
+try {
+    br = new BufferedReader(new FileReader("datos.txt"));
+    String linea = br.readLine();
+} catch (IOException e) {
+    e.printStackTrace();
+} finally {
+    try {
+        if (br != null) br.close();
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+// AHORA (Java 7+): try-with-resources
+try (BufferedReader br = new BufferedReader(new FileReader("datos.txt"))) {
     String linea = br.readLine();
 } catch (IOException e) {
     e.printStackTrace();
 }
-// reader y br se cierran automaticamente
+// br.close() se llama automaticamente, sin finally
 
-// multi-catch
+// Multiples recursos: se cierran en orden INVERSO
+try (FileReader fr = new FileReader("datos.txt");
+     BufferedReader br = new BufferedReader(fr)) {
+    String linea = br.readLine();
+} catch (IOException e) {
+    e.printStackTrace();
+}
+// Orden de cierre: br primero, fr despues (ultimo declarado, primero cerrado)
+
+// Tu propia clase AutoCloseable
+public class MiRecurso implements AutoCloseable {
+    private final String nombre;
+
+    public MiRecurso(String nombre) {
+        this.nombre = nombre;
+        System.out.println("Abriendo: " + nombre);
+    }
+
+    @Override
+    public void close() throws Exception {
+        System.out.println("Cerrando: " + nombre);
+    }
+}
+
+// Uso
+try (MiRecurso r1 = new MiRecurso("A");
+     MiRecurso r2 = new MiRecurso("B")) {
+    System.out.println("Usando recursos");
+} catch (Exception e) {
+    e.printStackTrace();
+}
+// Output:
+// Abriendo: A
+// Abriendo: B
+// Usando recursos
+// Cerrando: B
+// Cerrando: A`,
+        questions: [
+          { question: 'Que es AutoCloseable?', answer: 'Interfaz funcional con un metodo close() throws Exception. Cualquier clase que la implemente puede usarse en try-with-resources. java.io y java.sql ya lo implementan (InputStream, Connection, ResultSet, etc). close() se llama automaticamente al salir del bloque.' },
+          { question: 'Por que se cierran en orden inverso?', answer: 'Si el recurso B depende del A (BufferedReader usa FileReader), cerrar A primero haria que B fallase. Java cierra en orden inverso de declaracion: ultimo declarado (B) se cierra primero. Garantiza que dependencias se cierren antes que sus proveedores.' },
+          { question: 'Que pasa si close() falla?', answer: 'Si el try se ejecuto bien pero close() lanza excepcion, esa excepcion se propaga. Si el try tambien fallo, la excepcion original se mantiene y la de close() se anade como suppressed (getSuppressed()). Java prioriza el error original para debugging.' }
+        ]
+      },
+      {
+        title: 'Propagacion y throws',
+        slug: 'excepciones-propagacion',
+        orderIndex: 4,
+        description: 'Una excepcion puede propagarse hacia arriba en el call stack si el metodo no la captura. Para checked, hay que declarar throws en la firma. Para unchecked, se propagan automaticamente. Este mecanismo permite separar deteccion (donde se detecta el error) de manejo (donde se decide que hacer).',
+        codeExample: `// Propagacion natural: no capturas, sube al caller
+public void metodoA() {
+    metodoB();  // no captura, sube al caller de metodoA
+}
+
+public void metodoB() {
+    metodoC();  // si metodoC lanza, sube a metodoA
+}
+
+public void metodoC() {
+    throw new RuntimeException("Algo fallo");
+}
+// Stack trace mostrara: metodoC -> metodoB -> metodoA -> main
+
+// Checked: el compilador exige throws en la firma
+public void leerArchivo(String path) throws IOException {
+    FileReader reader = new FileReader(path);  // IOException es checked
+    // si no capturas y no declaras throws, NO COMPILA
+}
+
+// El caller decide: capturar o seguir propagando
+public void procesarDatos() throws IOException {
+    leerArchivo("datos.txt");  // sigue propagando
+}
+
+public void main() {
+    try {
+        procesarDatos();
+    } catch (IOException e) {
+        System.out.println("No se pudo leer: " + e.getMessage());
+    }
+}
+
+// Cadena de excepciones: causa original + wrap
+public void cargarConfig() throws ConfigException {
+    try {
+        FileReader reader = new FileReader("config.properties");
+    } catch (IOException e) {
+        // wrap: la original como causa, nueva mas semantica
+        throw new ConfigException("Config invalida", e);
+    }
+}
+// el usuario hace: e.getCause() para ver la IOException original`,
+        questions: [
+          { question: 'Cuando propagar vs cuando capturar?', answer: 'Captura cuando puedes recover (archivo no existe -> usar default). Propaga cuando no tienes info suficiente para decidir (capa DAO no sabe si archivo faltante es fatal, dejalo subir al service/controller). En capas altas (controller), captura y devuelve error HTTP al cliente.' },
+          { question: 'Que es exception chaining (wrap)?', answer: 'Cuando al capturar una excepcion lanzas otra mas semantica, pasando la original como causa: throw new MiException("Mensaje claro", e). La nueva describe el problema en terminos de la capa actual, pero conservas la causa original accesible con getCause(). Mejora debugging sin perder informacion.' },
+          { question: 'Por que no capturar Exception generica?', answer: 'catch (Exception e) captura TODO, incluidas RuntimeException que no esperabas (bugs). Enmascara errores de programacion. Mejor capturar especifico (IOException) y dejar que RuntimeException suba para que el bug salga a la luz. Si capturas generico, al menos rethrow despues de loguear.' }
+        ]
+      },
+      {
+        title: 'Excepciones Custom',
+        slug: 'excepciones-custom',
+        orderIndex: 5,
+        description: 'Crear tus propias excepciones para expresar errores especificos del dominio. Checked (extends Exception) para errores recuperables. Unchecked (extends RuntimeException) para bugs de programacion. Buenos nombres terminan en Exception. Incluyen mensaje claro y opcionalmente codigo de error, causa y datos extra.',
+        codeExample: `// CHECKED: error recuperable, el caller debe manejar
+public class ConfigNotFoundException extends Exception {
+    private final String configName;
+
+    public ConfigNotFoundException(String configName) {
+        super("Configuracion no encontrada: " + configName);
+        this.configName = configName;
+    }
+
+    public ConfigNotFoundException(String configName, Throwable cause) {
+        super("Configuracion no encontrada: " + configName, cause);
+        this.configName = configName;
+    }
+
+    public String getConfigName() { return configName; }
+}
+
+// UNCHECKED: bug de programacion, no se deberia capturar
+public class InvalidEmailException extends RuntimeException {
+    public InvalidEmailException(String email) {
+        super("Email invalido: " + email);
+    }
+}
+
+// Uso en el dominio
+public class UserService {
+    private final ConfigLoader loader;
+
+    public void loadConfig() throws ConfigNotFoundException {
+        if (!loader.exists("app.config")) {
+            throw new ConfigNotFoundException("app.config");
+        }
+        // ...
+    }
+
+    public void setEmail(String email) {
+        if (!email.contains("@")) {
+            throw new InvalidEmailException(email);  // bug del caller
+        }
+        this.email = email;
+    }
+}
+
+// Usar excepciones con jerarquia para tu dominio
+public class DomainException extends Exception {}
+public class UserNotFoundException extends DomainException {}
+public class InvalidUserDataException extends DomainException {}
+// caller puede: catch (DomainException e) para todas o especifico`,
+        questions: [
+          { question: 'Cuando crear una excepcion custom?', answer: 'Cuando las del JDK no describen bien tu problema de dominio. "FileNotFoundException" no dice nada de tu dominio; "UsuarioNoEncontradoException" si. Crea una custom cuando el error tiene significado especifico y quieres handlers diferenciados por tipo.' },
+          { question: 'Checked o Unchecked para custom?', answer: 'Checked (extends Exception): errores recuperables, el caller puede hacer algo (pedir otro archivo). Unchecked (extends RuntimeException): bugs de programacion o invariantes violados (edad negativa, email mal formado). No se deberian capturar, sino corregir. Tendencia moderna: preferir unchecked.' }
+        ]
+      },
+      {
+        title: 'Buenas practicas',
+        slug: 'excepciones-buenas-practicas',
+        orderIndex: 6,
+        description: 'Consejos para usar excepciones correctamente y no convertir tu codigo en una pesadilla de debuggear. Evitamos capturar generico, no ignorar excepciones, no usar excepciones para control flow, y always log con contexto.',
+        codeExample: `// MAL: capturar y tragar
 try {
-    // ...
-} catch (IOException | SQLException e) {
-    // maneja ambos tipos igual
+    hacerAlgo();
+} catch (Exception e) {
+    // VACIO: el error se pierde, imposible debuggear
 }
 
-// Custom exception
-public class MiException extends Exception {
-    public MiException(String msg) { super(msg); }
+// MAL: capturar generico
+try {
+    cargarUsuario();
+    enviarEmail();
+} catch (Exception e) {
+    // captura TODO: NullPointerException bugs incluidos
+    log.error("Error", e);
 }
 
-public class MiRuntimeException extends RuntimeException {
-    public MiRuntimeException(String msg) { super(msg); }
+// BIEN: capturar especifico
+try {
+    cargarUsuario();
+} catch (SQLException e) {
+    log.error("Error cargando usuario", e);
+    throw new ServiceException("No se pudo cargar usuario", e);
 }
 
-// throw
-if (edad < 0) throw new IllegalArgumentException("Edad negativa");`,
-    questions: [
-      { question: 'Checked vs Unchecked exceptions?', answer: 'Checked: heredan de Exception (no RuntimeException). El compilador obliga a manejarlas (try/catch o throws). Ej: IOException. Unchecked: heredan de RuntimeException. Compilador no obliga. Ej: NullPointerException, IllegalArgumentException.' },
-      { question: 'try-with-resources?', answer: 'Cierra recursos automaticamente al final del bloque. Requiere que el recurso implemente AutoCloseable. Multi-recurso: se cierran en orden inverso (ultimo declarado, primero cerrado). Mejor que finally manual.' },
-      { question: 'finally se ejecuta siempre?', answer: 'Casi. Si hay System.exit() o interrupcion brutal (kill -9) no. Si dentro del try hay un return, finally se ejecuta antes. Si finalmente lanza excepcion, sobrescribe la del try.' },
-      { question: 'Excepciones en Java 8+?', answer: 'Multi-catch con | (union): catch (IOException | SQLException e). No se pueden reasignar e en multi-catch. Nuevos metodos: addSuppressed() para excepciones en try-with-resources.' }
-    ],
-    subConcepts: []
+// MAL: usar excepciones para control flow
+try {
+    Integer.parseInt(input);
+    // procesar
+} catch (NumberFormatException e) {
+    // usar excepcion como if/else: lento y confuso
+    System.out.println("No era numero");
+}
+
+// BIEN: validar antes
+if (!input.matches("\\\\d+")) {
+    System.out.println("No era numero");
+} else {
+    int n = Integer.parseInt(input);
+}
+
+// BIEN: finally solo para cleanup, no para logica
+try (Connection c = ds.getConnection()) {
+    // usar c
+} catch (SQLException e) {
+    log.error("Error DB", e);
+    throw e;  // rethrow para que el caller decida
+}
+
+// BIEN: log SIEMPRE antes de cerrar la propagacion
+public void handleRequest() {
+    try {
+        service.process();
+    } catch (DomainException e) {
+        log.error("Error procesando request: {}", e.getMessage(), e);
+        // convertir a respuesta HTTP al cliente
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+}`,
+        questions: [
+          { question: 'Por que no usar excepciones para control flow?', answer: '1) Performance: crear y lanzar excepcion es costoso (stack trace, allocation). 2) Legibilidad: un if expresa intencion, un try-catch es para errores. 3) Confusion: el lector no sabe si fue un error o logica. Solo usa excepciones para errores reales, no para validar casos esperados.' },
+          { question: 'Que informacion loguear?', answer: 'Siempre: mensaje descriptivo ("Error cargando usuario 123"), excepcion completa (con stack trace, usa log.error("msg", e) no solo getMessage()). Contexto: ids, parametros, estado. En capas bajas loguear una vez; en capas altas capturar y devolver respuesta amigable al usuario.' }
+        ]
+      }
+    ]
   },
   {
     id: 30,
